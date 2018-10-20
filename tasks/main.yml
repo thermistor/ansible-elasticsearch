@@ -1,0 +1,14 @@
+---
+- name: Add elasticsearch apt key
+  apt_key:
+    url: https://artifacts.elastic.co/GPG-KEY-elasticsearch
+    state: present
+
+- name: Add elasticsearch repository
+  apt_repository:
+    repo: '{{ elasticsearch_repo }}'
+    state: present
+    update_cache: true
+
+- name: Install elasticsearch
+  apt: pkg=elasticsearch state=present

@@ -1,4 +1,5 @@
 galaxy_info:
+  role_name: elasticsearch
   author: Weston Triemstra
   description: Install and configure elasticsearch 6.x
   company: Netsign

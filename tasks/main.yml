@@ -1,14 +1,92 @@
 ---
-- name: Add elasticsearch apt key
-  apt_key:
-    url: https://artifacts.elastic.co/GPG-KEY-elasticsearch
+# Needed for deb822_repository
+- name: Install python3-debian
+  ansible.builtin.apt:
+    pkg: python3-debian
     state: present
 
-- name: Add elasticsearch repository
-  apt_repository:
-    repo: '{{ elasticsearch_repo }}'
+- name: Download the Elasticsearch repository signing key
+  ansible.builtin.get_url:
+    url: "{{ elasticsearch_repo_key_url }}"
+    dest: /etc/apt/keyrings/elasticsearch.asc
+    owner: root
+    group: root
+    mode: '0644'
+
+- name: Add Elasticsearch repository
+  ansible.builtin.deb822_repository:
+    name: elasticsearch
+    types: deb
+    uris: "{{ elasticsearch_repo_uri }}"
+    suites: stable
+    components: main
+    signed_by: /etc/apt/keyrings/elasticsearch.asc
     state: present
+  register: elasticsearch_repository
+
+- name: Update apt cache if the Elasticsearch repository changed
+  ansible.builtin.apt:
     update_cache: true
+  when: elasticsearch_repository is changed # noqa: no-handler
 
-- name: Install elasticsearch
-  apt: pkg=elasticsearch state=present
+- name: Install Elasticsearch
+  ansible.builtin.apt:
+    pkg: "elasticsearch={{ elasticsearch_version }}"
+    state: present
+    allow_change_held_packages: true
+  notify: Restart elasticsearch
+
+# Only this role changes the Elasticsearch version, never an apt upgrade
+- name: Hold the Elasticsearch package at the installed version
+  ansible.builtin.dpkg_selections:
+    name: elasticsearch
+    selection: hold
+
+- name: Configure Elasticsearch
+  ansible.builtin.template:
+    src: elasticsearch.yml.j2
+    dest: /etc/elasticsearch/elasticsearch.yml
+    owner: root
+    group: elasticsearch
+    mode: '0660'
+  notify: Restart elasticsearch
+
+- name: Configure the Elasticsearch JVM heap size
+  ansible.builtin.template:
+    src: heap.options.j2
+    dest: /etc/elasticsearch/jvm.options.d/heap.options
+    owner: root
+    group: elasticsearch
+    mode: '0660'
+  notify: Restart elasticsearch
+
+# The package's security auto-configuration stores TLS keystore passwords,
+# Elasticsearch won't start with those present when security is disabled.
+- name: List the Elasticsearch keystore settings
+  ansible.builtin.command: /usr/share/elasticsearch/bin/elasticsearch-keystore list
+  register: elasticsearch_keystore
+  changed_when: false
+  when: not elasticsearch_security_enabled | bool
+
+- name: Remove the auto-configured TLS settings from the Elasticsearch keystore
+  ansible.builtin.command: "/usr/share/elasticsearch/bin/elasticsearch-keystore remove {{ item }}"
+  loop: "{{ elasticsearch_keystore.stdout_lines | select('match', '^xpack\\.security\\.(http|transport)\\.ssl\\.') }}"
+  changed_when: true
+  notify: Restart elasticsearch
+  when: not elasticsearch_security_enabled | bool
+
+# Restarting here also does the first start on a fresh install
+- name: Apply Elasticsearch changes
+  ansible.builtin.meta: flush_handlers
+
+- name: Enable and start Elasticsearch
+  ansible.builtin.systemd_service:
+    name: elasticsearch
+    enabled: true
+    state: started
+
+- name: Wait for Elasticsearch to accept connections
+  ansible.builtin.wait_for:
+    host: "{{ elasticsearch_network_host }}"
+    port: "{{ elasticsearch_http_port }}"
+    timeout: 120

@@ -1,5 +1,7 @@
 ---
-- hosts: localhost
-  remote_user: root
+- name: Test the elasticsearch role
+  hosts: all
+  become: true
   roles:
-    - ansible-elasticsearch
+    - role: thermistor.elasticsearch
+      elasticsearch_heap_size: 512m

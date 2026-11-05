@@ -1,1 +1,10 @@
 ---
+elasticsearch_base_config:
+  cluster.name: "{{ elasticsearch_cluster_name }}"
+  node.name: "{{ elasticsearch_node_name }}"
+  path.data: "{{ elasticsearch_data_dir }}"
+  path.logs: "{{ elasticsearch_log_dir }}"
+  network.host: "{{ elasticsearch_network_host }}"
+  http.port: "{{ elasticsearch_http_port | int }}"
+  discovery.type: single-node
+  xpack.security.enabled: "{{ elasticsearch_security_enabled | bool }}"

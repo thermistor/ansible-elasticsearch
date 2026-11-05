@@ -1,20 +1,21 @@
+---
 galaxy_info:
   role_name: elasticsearch
+  namespace: thermistor
   author: Weston Triemstra
-  description: Install and configure elasticsearch 6.x
+  description: Install and configure a single node Elasticsearch
   company: Netsign
-
   license: MIT
-
-  min_ansible_version: 2.4
+  min_ansible_version: '2.16'
 
   platforms:
     - name: Ubuntu
       versions:
-        - bionic
+        - noble
+        - resolute
 
   galaxy_tags:
     - elasticsearch
+    - search
 
-dependencies:
-  - { role: geerlingguy.java }
+dependencies: []

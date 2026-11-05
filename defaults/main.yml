@@ -1,2 +1,20 @@
 ---
-elasticsearch_repo: 'deb https://artifacts.elastic.co/packages/6.x/apt stable main'
+elasticsearch_version: '9.5.6'
+elasticsearch_repo_key_url: https://artifacts.elastic.co/GPG-KEY-elasticsearch
+elasticsearch_repo_uri: "https://artifacts.elastic.co/packages/{{ elasticsearch_version.split('.') | first }}.x/apt"
+
+elasticsearch_heap_size: 1g
+
+elasticsearch_cluster_name: elasticsearch
+elasticsearch_node_name: "{{ inventory_hostname }}"
+elasticsearch_network_host: localhost
+elasticsearch_http_port: 9200
+elasticsearch_data_dir: /var/lib/elasticsearch
+elasticsearch_log_dir: /var/log/elasticsearch
+
+# Security (auth + TLS) is off, ES is only reachable on localhost by default.
+# Turning it on also needs the TLS settings supplied through elasticsearch_config.
+elasticsearch_security_enabled: false
+
+# Extra elasticsearch.yml settings, merged over the role's settings.
+elasticsearch_config: {}
